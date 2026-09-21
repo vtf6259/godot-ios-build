@@ -1,0 +1,39 @@
+name: "Build iOS app"
+
+# on: [push]
+on: [workflow_dispatch]
+
+jobs:
+  build_ios:
+    runs-on: macos-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: download project archive from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download source-fefdfc4e-b615-11f1-9320-bc091b255c74 --repo vtf6259/godot-ios-build --dir . --clobber
+          unzip -o tempxcodeproject.zip -d .
+
+      - name: build archive and ipaify
+        run: |
+          xcodebuild archive -project Robo Jumper.xcodeproj -scheme 'Robo Jumper' -archivePath Robo Jumper.xcarchive -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+          mkdir Payload
+          mv Robo Jumper.xcarchive/Products/Applications/Robo Jumper.app Payload/Robo Jumper.app
+
+          zip -r "Robo Jumper.ipa" "Payload"
+
+          mv Robo Jumper.ipa ${{ runner.temp }}/Robo Jumper.ipa
+
+
+      - name: Upload application
+        uses: actions/upload-artifact@v4
+        with:
+          name: Robo Jumper
+          path: ${{ runner.temp }}/Robo Jumper.ipa
+          # you can also archive the entire directory
+          # path: ${{ runner.temp }}/build
+          retention-days: 3
